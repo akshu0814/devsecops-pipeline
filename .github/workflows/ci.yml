@@ -60,11 +60,42 @@ jobs:
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
-  # ── Job 4: Build & Push ─────────────────────────────────────────────────────
+  # ── Job 4: SAST ─────────────────────────────────────────────────────────────
+  sast:
+    name: SAST (Semgrep)
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      security-events: write   # needed to upload SARIF to GitHub Security tab
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install Semgrep
+        run: pip install semgrep
+
+      - name: Run Semgrep
+        run: |
+          semgrep \
+            --config=p/python \
+            --config=p/owasp-top-ten \
+            --sarif \
+            --output=semgrep.sarif \
+            .
+
+      # Upload results to GitHub Security tab even if Semgrep found issues,
+      # so you can review findings there instead of digging through logs.
+      - name: Upload SARIF to GitHub Security tab
+        uses: github/codeql-action/upload-sarif@v3
+        if: always()
+        with:
+          sarif_file: semgrep.sarif
+
+  # ── Job 5: Build & Push ─────────────────────────────────────────────────────
   build-and-push:
     name: Build & Push to GHCR
     runs-on: ubuntu-latest
-    needs: [test, gitleaks]   # blocked until both tests AND secret scan pass
+    needs: [test, gitleaks, sast]   # blocked until tests, secrets, AND SAST pass
     permissions:
       contents: read
       packages: write    # needed to push to GitHub Container Registry
