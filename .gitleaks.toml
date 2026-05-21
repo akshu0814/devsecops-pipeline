@@ -1,0 +1,12 @@
+[extend]
+# Use Gitleaks' built-in ruleset as the base (covers 100+ secret patterns:
+# AWS keys, GitHub tokens, Stripe keys, private keys, etc.)
+useDefault = true
+
+[allowlist]
+# Allowlist specific paths that contain fake/test credentials.
+# Without this, test files that use dummy values like "test-secret-key"
+# would trigger false positives and block your pipeline.
+paths = [
+  "tests/",
+]
